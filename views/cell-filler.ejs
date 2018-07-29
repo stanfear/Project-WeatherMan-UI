@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <% include partials/head %>
+    <script src="http://code.jquery.com/jquery-1.6.2.min.js"></script>
+    <script type="text/javascript">
+        $(function () {
+            $('.subSlot').click(function (e) {
+                e.preventDefault();
+
+                let row = (e.target.parentElement.parentElement);
+
+                var data = {};
+                data.MainWeather = $(row).find("#MainWeather option:selected").val();
+                if (data.MainWeather === "/") {
+                    $(row).find("#MainWeather").css("border", "1px solid red");
+                    return;
+                }
+                data.EffectWeather = $(row).find("#EffectWeather option:selected").val();
+                if (data.EffectWeather === "/") { delete data.EffectWeather; }
+                data.WindDirection = $(row).find("#WindDirection option:selected").val();
+                if (data.WindDirection === "/") { delete data.WindDirection; }
+                
+                let Slot = $(row).find("#slot").val();
+
+                $.ajax({
+                    type: 'POST',
+                    data: JSON.stringify(data),
+                    contentType: 'application/json',
+                    url: '/cell/' + '16546' + '/' + Slot,
+                    success: function (data) {
+                        let table = $(row).parent();
+                        $(row).replaceWith('<tr><td id="done' + Slot +'" colspan="7" style="background: green; text-align:center;">Done</td></tr>')
+                        $(table).find("#done"+Slot).fadeIn().delay(2000).fadeOut();
+                    }
+                });
+            });
+
+            $('.DelSlot').click(function (e) {
+                e.preventDefault();
+                console.log('Example app listening on port 3000!')
+                let row = (e.target.parentElement.parentElement);
+                let Slot = $(row).find("#slot").val();
+
+                $.ajax({
+                    type: 'DELETE',
+                    data: {},
+                    contentType: 'application/json',
+                    url: '/cell/' + '16546' + '/' + Slot,
+                    success: function (data) {
+                        let table = $(row).parent();
+                        $(row).replaceWith('<tr><td id="done' + Slot + '" colspan="7" style="background: green; text-align:center;">Done</td></tr>')
+                        $(table).find("#done" + Slot).fadeIn().delay(2000).fadeOut();
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+
+<body class="container">
+
+    <header>
+        <% include partials/header %>
+    </header>
+
+    <main>
+        <div class="jumbotron">
+                <table style="width:100%">
+                    <tr>
+                        <th>date</th>
+                        <th>time slot</th>
+                        <th>in game weather</th>
+                        <th>in game effect</th>
+                        <th>in game wind</th>
+                    </tr>
+                    <%  slots.forEach(element => { %>
+                    <tr>
+                        <input type="hidden" value="<%= moment(element).valueOf() %>" id="slot"/>
+                        <td><%= moment(element).format('MM/DD/YYYY'); %></td>
+                        <td><%= moment(element).format('ha'); %></td>
+                        <td>
+                            <select name="MainWeather" id="MainWeather">
+                                <option value="/">no report</option>
+                                <option value="Clear/Sunny">Clear/Sunny</option>
+                                <option value="Partly Cloudy">Partly Cloudy</option>
+                                <option value="Cloudy">Cloudy</option>
+                                <option value="Rain">Rain</option>
+                                <option value="Snow">Snow</option>
+                                <option value="Fog">Fog</option>
+                                <option value="Windy">Windy</option>
+                            </select>
+                        </td>
+                        <td>   
+                            <select name="EffectWeather" id="EffectWeather">
+                                <option value="/">no report</option>
+                                <option>Clear/Sunny</option>
+                                <option>Partly Cloudy</option>
+                                <option>Cloudy</option>
+                                <option>Rain</option>
+                                <option>Snow</option>
+                                <option>Fog</option>
+                                <option>Windy</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select name="WindDirection" id="WindDirection">
+                                <option value="/">None</option>
+                                <option>N</option>
+                                <option>NE</option>
+                                <option>E</option>
+                                <option>SE</option>
+                                <option>S</option>
+                                <option>SW</option>
+                                <option>W</option>
+                                <option>NW</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="button" value="submit this slot" class="subSlot">
+                        </td>
+                        <td>
+                            <input type="button" value="Delete weather data for slot" class="DelSlot">
+                        </td>
+                    </tr>
+                    <% }); %>
+                </table>
+        </div>
+    </main>
+
+    <footer>
+        <% include partials/footer %>
+    </footer>
+
+</body>
+
+</html>
