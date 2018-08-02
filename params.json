@@ -14,4 +14,3 @@
     "AccuWeatherAPIKey" : "",
     "AccuWeatherImportCRON": "1 * * * *"
 }
-}
