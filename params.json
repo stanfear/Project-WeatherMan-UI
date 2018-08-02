@@ -1,6 +1,17 @@
 {
-    "clientID": "",
-    "clientSecret": "",
-    "callbackURL": "",
-    "sessionSecret" : ""
+    "Discord":{
+        "clientID": "",
+        "clientSecret": "",
+        "callbackURL": "http://localhost:3000/connection"
+    },
+    "sessionSecret": "",
+    "MySQL" : {
+        "host": "",
+        "user": "",
+        "password": "",
+        "database": ""
+    },
+    "AccuWeatherAPIKey" : "",
+    "AccuWeatherImportCRON": "1 * * * *"
+}
 }
