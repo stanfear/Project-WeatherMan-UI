@@ -1,16 +1,16 @@
 {
-    "Discord":{
-        "clientID": "",
-        "clientSecret": "",
+    "Discord": {
+        "clientID": "472375689941614593",
+        "clientSecret": "2Ohzetr97_QA4EPYI9KCbo0cwbApS4kL",
         "callbackURL": "http://localhost:3000/connection"
     },
-    "sessionSecret": "",
-    "MySQL" : {
-        "host": "",
-        "user": "",
-        "password": "",
-        "database": ""
+    "sessionSecret": "WeatherMan",
+    "MySQL": {
+        "host": "localhost",
+        "user": "WeatherMan",
+        "password": "WeatherMan",
+        "database": "weatherman"
     },
-    "AccuWeatherAPIKey" : "",
+    "AccuWeatherAPIKey": "azZBSyshpCGQsggdAmmnQMOXAiIw9iDS",
     "AccuWeatherImportCRON": "1 * * * *"
 }

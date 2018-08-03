@@ -1,25 +1,27 @@
-const { promisify } = require('util');
-const express = require('express');
-const session = require('express-session');
-const passport = require('passport'); 
-const DiscordStrategy = require('passport-discord').Strategy;
-const moment = require('moment');
-const bodyParser = require('body-parser');
+import { promisify } from 'util';
+import { Connection, createConnection } from "mysql";
+//import express = require('express');
+import session = require('express-session');
+import passport = require('passport'); 
+import moment = require('moment');
+import bodyParser = require('body-parser');
+import axios = require('axios');
+import schedule = require('node-schedule');
+
+import discord = require('passport-discord');
+import express = require('express');
+
+
 const app = express();
-const mysql = require('mysql');
-const axios = require('axios');
-const schedule = require('node-schedule');
+const params = require("../params.json");
 
-
-const params = require("./params.json");
-
-const connection = mysql.createConnection(params.MySQL);
+const connection: Connection = createConnection(params.MySQL);
 
 connection.config.queryFormat = function (query, values) {
     if (!values) return query;
-    return query.replace(/\:(\w+)/g, function (txt, key) {
+    return query.replace(/\:(\w+)/g, function (txt: string, key: any) {
         if (values.hasOwnProperty(key)) {
-            return this.escape(values[key]);
+            return connection.escape(values[key]);
         }
         return txt;
     }.bind(this));
@@ -43,16 +45,16 @@ connection.connect(function (err) {
 const ProjectPage = "/WeatherMan"
 
 
-passport.serializeUser(function (user, done) {
+passport.serializeUser((user: discord.Strategy.Profile, done: (err: any, id?: discord.Strategy.Profile) => void) => {
     done(null, user);
 });
-passport.deserializeUser(function (obj, done) {
+passport.deserializeUser((obj: discord.Strategy.Profile, done: (err: any, user?: discord.Strategy.Profile) => void) => {
     done(null, obj);
 });
 
 params.Discord.scope = ['identify'];
-passport.use(new DiscordStrategy(params.Discord,
-    function (accessToken, refreshToken, profile, done) {
+passport.use(new discord.Strategy(params.Discord,
+    (accessToken: string, refreshToken: string, profile: discord.Strategy.Profile, done: (error: any, user?:any)=> void) => {
         process.nextTick(function () {
             return done(null, profile);
         });
@@ -92,7 +94,7 @@ app.get('/logout', function (req, res) {
 });
 
 
-function checkAuth(req, res, next) {
+function checkAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
     return next(); if (req.isAuthenticated()) return next();
     res.redirect('/');
 }
@@ -105,14 +107,15 @@ app.get(ProjectPage, checkAuth, function (req, res) {
 
 app.get("/cell/:id", checkAuth, async function (req, res) {
     // query database
-    let rows = await queryAsync(`
+    let rows = <any[]>await queryAsync(`
     SELECT 
-        *
+        DISTINCT reportTime
     FROM
         weatherman.accuweather_report acr
             JOIN
         weatherman.cell c ON c.AccuWeatherCellId = acr.AccuWeatherCellId
         WHERE
+        reportTime < NOW() AND 
         c.idcell = :cellId
             AND NOT EXISTS( SELECT 
                 *
@@ -190,11 +193,11 @@ async function ExportAccuWeather() {
     for (var i = 0, len = rows.length; i < len; i++) {
         let id = rows[i].AccuWeatherCellId
         let url = `http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/${id}?apikey=${params.AccuWeatherAPIKey}&details=true&metric=true`;
-        promises.push(axios.get(url).then(res => { res.data.forEach(e => e.cell = id); return res; }));
+        promises.push(axios.default.get(url).then(res => { (<any[]>res.data).forEach(e => e.cell = id); return res; }));
     }
     var cellsResult = await Promise.all(promises);
 
-    let slots = [].concat.apply([], Array.from(cellsResult, cell => cell.data));
+    let slots = <any[]>[].concat.apply([], Array.from(cellsResult, cell => cell.data));
     let values = Array.from(slots, row =>
         [
             row.cell,
