@@ -5,13 +5,16 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "nodemon_Prod": "set NODE_ENV=dev& nodemon build/server.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/config": "0.0.34",
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
+    "config": "^2.0.1",
     "ejs": "^2.6.1",
     "express": "^4.16.3",
     "express-session": "^1.15.6",
