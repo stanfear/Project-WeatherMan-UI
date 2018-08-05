@@ -74,3 +74,5 @@ typings/
 
 # buildFolder
 build
+
+config/dev.json
