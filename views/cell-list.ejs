@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <% include partials/head %>
+</head>
+
+<body class="container">
+
+    <header>
+        <% include partials/header %>
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.3/dist/leaflet.css" integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ=="
+            crossorigin="" />
+        <script src="https://unpkg.com/leaflet@1.3.3/dist/leaflet.js" integrity="sha512-tAGcCfR4Sc5ZP5ZoVz0quoZDYX5aCtEm/eu1KhSLj2c9eFrylXZknQYmxUssFaVJKvvc0dJQixhGjG2yXWiV9Q=="
+            crossorigin=""></script>
+        <script src="/js/leaflet-providers.js"></script>
+    </header>
+
+    <main>
+        <% cells.forEach(element => { %>
+            
+        <div onclick="window.location='./cell/<%= element.id%>';" style="float: left; margin: 5px;">
+            <div class="map"style="width: 250px; height: 250px">
+                <div id="<%= element.id%>" style="height: inherit; width: inherit;"><p hidden><%= JSON.stringify(element.geoJSON)%></p></div>
+            </div>
+        </div>
+
+        <% }) %>
+    </main>
+
+    <footer style="clear: both;">
+        <% include partials/footer %>
+    </footer>
+    <script src="http://code.jquery.com/jquery-1.6.2.min.js"></script>
+    <script src="/js/leaflet-freeze.js"></script>
+    <script>
+        $('.map').each(function (i, el) {
+                let id = $(el).children('div').attr('id');
+                let geoJSON = JSON.parse($(el).children('div').children("p").text());
+
+                var mymap = L.map(id, { attributionControl: false, zoomControl:false}).setView([37.8, -96], 4);
+                var Esri_WorldTopoMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+                });
+                Esri_WorldTopoMap.addTo(mymap);
+
+                var myLayer = new L.geoJSON(geoJSON).addTo(mymap);
+                mymap.fitBounds(myLayer.getBounds());
+                mymap.freeze();
+            });
+    </script>
+</body>
+
+</html>
