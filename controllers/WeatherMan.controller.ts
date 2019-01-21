@@ -1,8 +1,10 @@
 // Import only what we need from express
 import { Router, Request, Response, NextFunction } from 'express';
 import types = require("../types");
-import { S2Cell, S2CellId, S2LatLng, Utils } from "nodes2ts";
+import { S2Cell, S2CellId, S2LatLng, S2Point, Utils } from "nodes2ts";
 import moment = require('moment');
+import axios = require('axios');
+import { userInfo } from 'os';
 
 const util = require('util')
 
@@ -26,7 +28,17 @@ router.post("/register", async function (req: Request, res: Response) {
     res.redirect("./cell");
 });
 
-router.get("/admin/cell", async function (req: Request, res: Response) {
+
+async function isWeatherManAdmin(req: Request, res: Response, next: NextFunction) {
+    let user:types.Discord_DB_Profile = (<types.Discord_DB_Profile>req.user)
+    if(user.username == req.app.locals.config.get("adminUser") && user.discriminator == req.app.locals.config.get("adminDiscriminator")){
+        return next();
+    }else {
+        res.redirect('/');
+    }
+}
+
+router.get("/admin/cell", isWeatherManAdmin, async function (req: Request, res: Response) {
     var inactiveCells = await req.app.locals.db.cells.findAll({
         include:[
             {
@@ -45,9 +57,33 @@ router.get("/admin/cell", async function (req: Request, res: Response) {
     res.render("admin-list-authorize", { cells: userscells});
 });
 
-router.delete("/admin/cell/:cellId", async function (req: Request, res: Response) {
+router.delete("/admin/cell/:cellId", isWeatherManAdmin, async function (req: Request, res: Response) {
     try{
         await req.app.locals.db.cells.destroy({where:{idcell: req.params.cellId}})
+        res.sendStatus(200);
+    }catch(e){
+        console.log(e)
+        res.sendStatus(500);
+    }
+});
+
+
+router.post("/admin/cell/:cellId/authorize", isWeatherManAdmin, async function (req: Request, res: Response) {
+    try{
+        let cellpromess = req.app.locals.db.cells.findByPk(req.params.cellId)
+
+        let s2cell = new S2Cell(S2CellId.fromToken(req.params.cellId));
+        let s2LatLng = S2LatLng.fromPoint(s2cell.getCenter());
+
+        let url = `http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey=${req.app.locals.config.get("AccuWeatherAPIKey")}&q=${s2LatLng.latDegrees},${s2LatLng.lngDegrees}`
+
+        let response:any = await axios.default.get(url);
+        let cell = await cellpromess;
+
+        cell.AccuWeatherCellId = response.data.Key;
+        cell.TimeZone = response.data.TimeZone.Name;
+        cell.isactive = true;
+
         res.sendStatus(200);
     }catch(e){
         console.log(e)
@@ -172,7 +208,6 @@ router.delete("/cell/:id/:slot", checkCellAccessRights, async function (req: Req
         cell.accuweather_reports.forEach(function(report:any) {
             report.destroy();
           });
-        console.log(util.inspect(cell.accuweather_reports));
 
         res.sendStatus(200);
     } else {
