@@ -84,6 +84,8 @@ router.post("/admin/cell/:cellId/authorize", isWeatherManAdmin, async function (
         cell.TimeZone = response.data.TimeZone.Name;
         cell.isactive = true;
 
+        cell.save();
+
         res.sendStatus(200);
     }catch(e){
         console.log(e)
