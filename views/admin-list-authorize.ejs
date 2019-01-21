@@ -69,7 +69,7 @@
                     type: 'POST',
                     data: {},
                     contentType: 'application/json',
-                    url: './admin/cell/' + cell + '/authorize',
+                    url: './cell/' + cell + '/authorize',
                     success: function (data) {
                         let table = $(row).parent();
                         $(row).replaceWith('<tr><td id="done' + cell + '" colspan="5" style="background: green; text-align:center;">Done</td></tr>')
