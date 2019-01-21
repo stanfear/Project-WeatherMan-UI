@@ -3,7 +3,6 @@ import { Connection, createConnection } from "mysql";
 import config from 'config';
 import axios = require('axios');
 import schedule = require('node-schedule');
-import { S2Cell, S2LatLng, S2CellId } from "nodes2ts";
 
 //Express Related imports
 import bodyParser = require('body-parser');
@@ -15,28 +14,15 @@ import session = require('express-session');
 // custom typings
 import types = require("./types");
 
+const db = require('./db');
+
 //Custom Controllers
 import { WeathermanController } from './controllers';
-
-
 const app: express.Application = express();
 
-const connection: Connection = createConnection(config.get("MySQL"));
-connection.config.queryFormat = function (query, values) {
-    if (!values) return query;
-    return query.replace(/\:(\w+)/g, function (txt: string, key: any) {
-        if (values.hasOwnProperty(key)) {
-            return connection.escape(values[key]);
-        }
-        return txt;
-    }.bind(this));
-};
-const queryAsync = promisify(connection.query).bind(connection);
+db.sequelize.sync();
 
-app.locals.bdQueryAsync = queryAsync;
-
-
-
+app.locals.db = db;
 
 passport.serializeUser((user: types.Discord_DB_Profile, done: (err: any, id?: types.Discord_DB_Profile) => void) => {
     done(null, user);
@@ -49,21 +35,18 @@ let DiscordParams: any = config.get("Discord");
 DiscordParams.scope = ['identify'];
 passport.use(new discord.Strategy(DiscordParams,
     async (accessToken: string, refreshToken: string, profile: discord.Strategy.Profile, done: (error: any, user?:any)=> void) => {
-        let rows = <any[]>await queryAsync(`
-        SELECT
-            idUser
-        FROM 
-            weatherman.user u
-        WHERE
-            u.UserName = :username AND
-            u.UserDiscriminator = :discriminator;`,
-        { 
-            username: profile.username,
-            discriminator: profile.discriminator
-        });
-        (<types.Discord_DB_Profile>profile).DBid = rows[0].idUser;
-        done(null, profile);
-    }));
+        db.users
+            .findOrCreate({where: {UserName:profile.username, UserDiscriminator:profile.discriminator}})
+            .spread((user: any, created:boolean) => {
+                (<types.Discord_DB_Profile>profile).DBid = user.dataValues.idUser;
+                
+                //console.log(user);
+                //console.log(created);
+
+                done(null, profile);
+            });
+    })
+);
 
 
 app.use(session({
@@ -94,22 +77,6 @@ app.get('/', function (req, res) {
         res.render('front-page', { weather: req.user});
     }
 });
-
-
-
-app.get('/map', function (req, res) {
-    res.render('map');
-});
-
-
-app.get('/map/S2Cell', function (req, res) {
-    var s2 = new S2Cell(S2CellId.fromPoint(S2LatLng.fromDegrees(req.query.lat, req.query.lng).toPoint()).parentL(10));
-    res.send(s2.toGEOJSON());
-});
-
-
-
-
 
 app.get('/login', passport.authenticate('discord', { scope: DiscordParams.scope }), function (req, res) {});
 app.get('/connection',
@@ -219,76 +186,50 @@ function checkAuth(req: express.Request, res: express.Response, next: express.Ne
 // });
 
 async function ExportAccuWeather() {
+    let cells = await db.cells.findAll({
+        where :{
+            isactive: true
+        }
+    });
 
-    let rows = await queryAsync("SELECT DISTINCT AccuWeatherCellId FROM weatherman.cell;");
-    let promises = [];
-    for (var i = 0, len = rows.length; i < len; i++) {
-        let id = rows[i].AccuWeatherCellId
+    let promises:any = [];
+    for (var i = 0, len = cells.length; i < len; i++) {
+        let id = cells[i].AccuWeatherCellId;
         let url = `http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/${id}?apikey=${config.get("AccuWeatherAPIKey")}&details=true&metric=true`;
         promises.push(axios.default.get(url).then(res => { (<any[]>res.data).forEach(e => e.cell = id); return res; }));
-    }
+    };
+    
     var cellsResult = await Promise.all(promises);
 
-    let slots = <any[]>[].concat.apply([], Array.from(cellsResult, cell => cell.data));
-    let values = Array.from(slots, row =>
-        [
-            row.cell,
-            new Date(row.EpochDateTime * 1000),
-            row.WeatherIcon,
-            row.IconPhrase,
-            row.IsDaylight,
-            row.Temperature.Value,
-            row.Wind.Speed.Value,
-            row.Wind.Direction.Degrees,
-            row.WindGust.Speed.Value,
-            row.RelativeHumidity,
-            row.Visibility.Value,
-            row.Rain.Value,
-            row.Snow.Value,
-            row.Ice.Value,
-            row.CloudCover,
-            row.PrecipitationProbability
-        ]);
-
-
-    await queryAsync(`INSERT INTO weatherman.accuweather_report (
-        AccuWeatherCellId,
-        reportTime,
-        WeatherIcon,
-        WeatherDescription,
-        isDaylight,
-        Temperature,
-        WindSpeed,
-        WindDirection,
-        WindGustSpeed,
-        RelativeHumidity,
-        Visibility,
-        RainQuantity,
-        SnowQuantity,
-        IceQuantity,
-        CloudCover,
-        PrecipitationProbability)
-    VALUES :values;`,
-        {
-            values: values
-        });
-
+    let slots = <any[]>[].concat.apply([], Array.from(cellsResult, (cell:any) => cell.data));
+    let values = Array.from(slots, row => {
+        return {
+            AccuWeatherCellId : row.cell,
+            reportTime : new Date(row.EpochDateTime * 1000),
+            WeatherIcon : row.WeatherIcon,
+            WeatherDescription : row.IconPhrase,
+            isDaylight : row.IsDaylight,
+            Temperature : row.Temperature.Value,
+            WindSpeed : row.Wind.Speed.Value,
+            WindDirection : row.Wind.Direction.Degrees,
+            WindGustSpeed : row.WindGust.Speed.Value,
+            RelativeHumidity : row.RelativeHumidity,
+            Visibility : row.Visibility.Value,
+            RainQuantity : row.Rain.Value,
+            SnowQuantity : row.Snow.Value,
+            IceQuantity : row.Ice.Value,
+            CloudCover : row.CloudCover,
+            PrecipitationProbability : row.PrecipitationProbability
+        }
+    });
+    db.accuweather_reports.bulkCreate(values);
 }
-
-
-
-connection.connect(function (err) {
-    if (err) {
-        console.error('error connecting: ' + err.stack);
-        return;
-    }
-    console.log('connected as id ' + connection.threadId);
-});
-
 
 app.listen(3000, function () {
     console.log('Example app listening on port 3000!')
 });
 
-var j = schedule.scheduleJob(config.get("AccuWeatherImportCRON"), ExportAccuWeather);
-j.on("scheduled", (arg: any[]) => console.log(`Next run of "ExportAccuWeather" Scheduled at ${arg}`))
+//ExportAccuWeather()
+
+//var j = schedule.scheduleJob(config.get("AccuWeatherImportCRON"), ExportAccuWeather);
+//j.on("scheduled", (arg: any[]) => console.log(`Next run of "ExportAccuWeather" Scheduled at ${arg}`))

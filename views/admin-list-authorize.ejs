@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <% include partials/head %>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.3/dist/leaflet.css" integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ=="
+        crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.3.3/dist/leaflet.js" integrity="sha512-tAGcCfR4Sc5ZP5ZoVz0quoZDYX5aCtEm/eu1KhSLj2c9eFrylXZknQYmxUssFaVJKvvc0dJQixhGjG2yXWiV9Q=="
+        crossorigin=""></script>
+    <script src="http://code.jquery.com/jquery-1.6.2.min.js"></script>
+    <script src="/js/leaflet-providers.js"></script>
+    <script src="/js/leaflet-freeze.js"></script>
+</head>
+
+<body class="container">
+
+    <header>
+        <% include partials/header %>
+
+    </header>
+
+    <main>
+        <div class="jumbotron">
+            <table style="width:100%">
+                <tr>
+                    <th>UserName</th>
+                    <th>Cell</th>
+                </tr>
+                <% cells.forEach(element => {%>
+                <tr>
+                    <input type="hidden" value="<%= element.id %>" id="cellId" />
+                    <td>
+                        <%= element.username %>
+                    </td>
+                    <td class="cellid">
+                        <%= element.id %>
+                    </td>
+                    <td>
+                        <div class="map" style="width: 250px; height: 250px">
+                            <div id="<%= element.id%>" style="height: inherit; width: inherit;">
+                                <p hidden>
+                                    <%= JSON.stringify({geoJSON: element.geoJSON, active: element.active})%>
+                                </p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <input type="button" value="Accept" class="Accept">
+                    </td>
+                    <td>
+                        <input type="button" value="Reject" class="Reject">
+                    </td>
+                </tr>
+                <% }); %>
+            </table>
+        </div>
+    </main>
+
+    <footer style="clear: both;">
+        <% include partials/footer %>
+    </footer>
+    <script type="text/javascript">
+        $(function () {
+            $('.Accept').click(function (e) {
+                e.preventDefault();
+                let row = (e.target.parentElement.parentElement);
+                let cell = $(row).find("#cellId").val();
+                $.ajax({
+                    type: 'POST',
+                    data: {},
+                    contentType: 'application/json',
+                    url: './admin/cell/' + cell + '/authorize',
+                    success: function (data) {
+                        let table = $(row).parent();
+                        $(row).replaceWith('<tr><td id="done' + cell + '" colspan="5" style="background: green; text-align:center;">Done</td></tr>')
+                        $(table).find("#done" + cell).fadeIn().delay(2000).fadeOut();
+                    }
+                });
+            });
+
+            $('.Reject').click(function (e) {
+                e.preventDefault();
+                let row = (e.target.parentElement.parentElement);
+                let cell = $(row).find("#cellId").val();
+                $.ajax({
+                    type: 'DELETE',
+                    data: {},
+                    contentType: 'application/json',
+                    url: './cell/' + cell,
+                    success: function (data) {
+                        let table = $(row).parent();
+                        $(row).replaceWith('<tr><td id="done' + cell + '" colspan="5" style="background: green; text-align:center;">Done</td></tr>')
+                        $(table).find("#done" + cell).fadeIn().delay(2000).fadeOut();
+                    }
+                });
+            });
+        });
+    </script>
+    <script>
+       
+        $('.map').each(function (i, el) {
+                let id = $(el).children('div').attr('id');
+                let elementValue = JSON.parse($(el).children('div').children("p").text());
+
+                var mymap = L.map(id, { attributionControl: false, zoomControl:true}).setView([37.8, -96], 4);
+                var Esri_WorldTopoMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+                });
+                Esri_WorldTopoMap.addTo(mymap);
+
+                var myLayer = new L.geoJSON(elementValue.geoJSON).addTo(mymap);
+                mymap.fitBounds(myLayer.getBounds());
+            });
+    </script>
+</body>
+
+</html>

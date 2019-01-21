@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <% include partials/head %>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.3/dist/leaflet.css" integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ=="
+        crossorigin="" />
+    <script src="http://code.jquery.com/jquery-1.6.2.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.3.3/dist/leaflet.js" integrity="sha512-tAGcCfR4Sc5ZP5ZoVz0quoZDYX5aCtEm/eu1KhSLj2c9eFrylXZknQYmxUssFaVJKvvc0dJQixhGjG2yXWiV9Q=="
+        crossorigin=""></script>
+    <script src="/js/leaflet-providers.js"></script>
+
+</head>
+
+<body class="container">
+
+    <header>
+        <% include partials/header %>            
+    </header>
+
+    
+    <main>
+        <p>Move around the map and select the cell you're going to report weather data for.<br/>
+            <i>if you give us access to your current position, we'll select the cell you're in (it's not always super fast) and you'll still be able to change it</i></p>
+        <div id="mapid" style="height: 480px"></div>
+        <form action="./register" method="POST">
+            <input id="token" name="token" type="hidden" value=""/>
+            <button type="submit">Ask for cell registration</button>
+        </form>
+        <p></p>
+    </main>
+  
+    <footer style="clear: both;">
+        <% include partials/footer %>
+    </footer>
+
+
+    <script>
+        var mymap = L.map('mapid').setView([37.8, -96], 4);
+        var Esri_WorldTopoMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+        });
+
+        Esri_WorldTopoMap.addTo(mymap);
+        var myLayer = L.geoJSON().addTo(mymap);
+
+        function onMapClick(e) {
+            $.ajax({
+                type: 'GET',
+                contentType: 'application/json',
+                url: './register/cellAt?lat=' + e.latlng.lat + "&lng=" + e.latlng.lng,
+                success: function (data) {
+                    console.log(data);
+                    if (myLayer) {
+                        mymap.removeLayer(myLayer);
+                    }
+                    myLayer = new L.geoJSON(data.geoJson).addTo(mymap);
+                    $('#token').val(data.token);
+                }
+            });
+        }
+
+        mymap.on('click', onMapClick);
+
+        navigator.geolocation.getCurrentPosition((pos) => {
+            var crd = pos.coords
+            mymap.panTo(new L.LatLng(crd.latitude, crd.longitude));
+            mymap.setZoom(12);
+            onMapClick({latlng : {lat : crd.latitude, lng: crd.longitude}});
+        });
+    </script>
+
+
+</body>
+
+</html>

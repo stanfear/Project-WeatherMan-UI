@@ -28,7 +28,7 @@
                     type: 'POST',
                     data: JSON.stringify(data),
                     contentType: 'application/json',
-                    url: '/cell/' + '<%= cell %>' + '/' + Slot,
+                    url: './' + '<%= cell %>' + '/' + Slot,
                     success: function (data) {
                         let table = $(row).parent();
                         $(row).replaceWith('<tr><td id="done' + Slot +'" colspan="7" style="background: green; text-align:center;">Done</td></tr>')
@@ -39,16 +39,14 @@
 
             $('.DelSlot').click(function (e) {
                 e.preventDefault();
-                console.log('Example app listening on port 3000!')
                 let row = (e.target.parentElement.parentElement);
                 let Slot = $(row).find("#slot").val();
                 
-
                 $.ajax({
                     type: 'DELETE',
                     data: {},
                     contentType: 'application/json',
-                    url: '/cell/' + '<%= cell %>' + '/' + Slot,
+                    url: './' + '<%= cell %>' + '/' + Slot,
                     success: function (data) {
                         let table = $(row).parent();
                         $(row).replaceWith('<tr><td id="done' + Slot + '" colspan="7" style="background: green; text-align:center;">Done</td></tr>')
