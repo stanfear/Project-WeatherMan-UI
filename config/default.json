@@ -1,16 +1,13 @@
 {
+    "listeningPort" : 3000,
     "Discord": {
         "clientID": "",
         "clientSecret": "",
         "callbackURL": "http://localhost:3000/connection"
     },
     "sessionSecret": "WeatherMan",
-    "MySQL": {
-        "host": "localhost",
-        "user": "WeatherMan",
-        "password": "WeatherMan",
-        "database": "weatherman"
-    },
     "AccuWeatherAPIKey": "",
-    "AccuWeatherImportCRON": "1 * * * *"
+    "AccuWeatherImportCRON": "1 * * * *",
+    "adminDiscriminator":"",
+    "adminUser":""
 }
