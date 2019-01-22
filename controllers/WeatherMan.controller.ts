@@ -24,8 +24,14 @@ router.get("/register", async function (req: Request, res: Response) {
 });
 
 router.post("/register", async function (req: Request, res: Response) {
-    await req.app.locals.db.cells.create({idcell: req.body.token, iduser: (<types.Discord_DB_Profile>req.user).DBid});
-    res.redirect("./cell");
+    try{
+        let c = new S2Cell(S2CellId.fromToken(req.params.cellId));
+        await req.app.locals.db.cells.create({idcell: req.body.token, iduser: (<types.Discord_DB_Profile>req.user).DBid});
+        res.sendStatus(200);
+    }
+    catch{
+        res.sendStatus(406);
+    }
 });
 
 
