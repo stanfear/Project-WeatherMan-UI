@@ -25,7 +25,7 @@ router.get("/register", async function (req: Request, res: Response) {
 
 router.post("/register", async function (req: Request, res: Response) {
     try{
-        let c = new S2Cell(S2CellId.fromToken(req.params.cellId));
+        let c = new S2Cell(S2CellId.fromToken(req.body.token));
         await req.app.locals.db.cells.create({idcell: req.body.token, iduser: (<types.Discord_DB_Profile>req.user).DBid});
         res.sendStatus(200);
     }
